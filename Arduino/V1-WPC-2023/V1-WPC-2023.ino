@@ -4,8 +4,14 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
+//---------------------------------------------
+
+// ---------------------- BUTTON -------------
+#define BUTTON_PIN    4
+// -------------------------------------------
+
 // --------------- AKTUATOR SERVO -----------
-#include <Servo.h>
+#include <ESP32Servo.h>
 #define PIN_SERVO     23
 Servo myservo;
 
@@ -17,16 +23,19 @@ Servo myservo;
 // ------------------------------------------
 
 // --------- THRESHOLD -----------------
-#define THRESHOLD     8.5
+#define THRESHOLD     7.5
 // ------------------------------------------
 
 
 // ---------------- LOGIKA BUKA ------------
 bool isHide         = false;
+int state           = 0;
+int seq             = 0;
+int buttonState     = 0;
 
 Adafruit_MPU6050 mpu;
 
-int state = 0;
+
 
 void setup(void) {
   Serial.begin(115200);
@@ -48,8 +57,19 @@ void setup(void) {
   
 
   // ----------- SETUP SERVO ------------------
-  myservo.attach(PIN_SERVO)
+//  // Allow allocation of all timers
+//  ESP32PWM::allocateTimer(0);
+//  ESP32PWM::allocateTimer(1);
+//  ESP32PWM::allocateTimer(2);
+//  ESP32PWM::allocateTimer(3);
+//  myservo.setPeriodHertz(50);
+  myservo.attach(PIN_SERVO);
   // ------------------------------------------
+
+
+  // ---------------- SETUP BUTTON -----------
+  pinMode(BUTTON_PIN, INPUT);
+  // -----------------------------------------
 
 
   // ----------- SETUP RGB -------------------
@@ -80,6 +100,12 @@ void loop() {
   Serial.print(", ");
   Serial.print("State:");
   Serial.print(state);
+  Serial.print(", ");
+  Serial.print("Seq:");
+  Serial.print(seq);
+  Serial.print(", ");
+  Serial.print("isHide:");
+  Serial.print(isHide);
   Serial.println("");
 
   // --------------- PROSEDUR PENGECEKAN POSISI ------------------
@@ -113,19 +139,62 @@ void loop() {
     rgb(60, 0, 255);                  // BIRU UNYU
   }
   else {
+    state = 0;
     rgb(0,0,0);
   }
   // ---------------------- PROSEDUR PENGECEKAN POSISI || -----------
 
 
-  // ----------------- PROSEDUR PEMBUKAAN --------------------------
+  // ------------------------ PROSEDUR PERUBAHAAN SEQ --------------
+  // seq = HijauMuda, Merah, Hijau Muda 
+  // seqBack = 
+  buttonState = digitalRead(BUTTON_PIN);
+  if (seq == 0){  // KONDISI AWAL SEQ
+    isHide = false;
+    
+    if( buttonState == HIGH && state == 4 ){
+      seq = 1;
+    } 
+  } else if (seq == 1) {
+    if( buttonState == HIGH && state == 1 ){
+      seq = 2;
+    }
+  } else if (seq == 2) {
+    if( buttonState == HIGH && state == 4 ){
+      seq = 3;                                    // DI Sequence 3 Sembunyi
+      isHide = true;
+    }
+  } else if (seq == 3) {
+    if( buttonState == HIGH && state == 5 ){
+      seq = 4;                                    // BIRU
+    }
+  } else if (seq == 4) {
+    if( buttonState == HIGH && state == 4 ){
+      seq = 5;                                    // Hijau Muda
+    }
+  } else {
+    isHide = false;
+  }
+  // ------------------------ PROSEDUR PERUBAHAN SEQ || -------------
+  
 
+
+  // ----------------- PROSEDUR PEMBUKAAN ---------------------------
+  if (isHide){
+    myservo.write(0);
+  } else {
+    myservo.write(180);
+  }
   // ----------------- PROSEDUR PEMBUKAAN || ------------------------
 
 
   
-
-
+  // ---------------- PROSEDUR RESET ---------------------------------
+  if( buttonState == HIGH && state == 6 ){
+      seq = 0;
+  } 
+  // ------------------- PROSEDUR RESET }} ---------------------------
+  
 
   
   delay(10);

@@ -183,7 +183,7 @@ void loop() {
   if (isHide){
     myservo.write(0);
   } else {
-    myservo.write(180);
+    myservo.write(18j0);
   }
   // ----------------- PROSEDUR PEMBUKAAN || ------------------------
 
